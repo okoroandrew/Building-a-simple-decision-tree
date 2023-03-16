@@ -14,25 +14,27 @@ def IG(D, index, value):
     Returns:
         The value of the Information Gain for the given split
     """
-    # Original entropy of the system (H(D)) = - sum(p(c1|D)log2p(c1|D))
     attributes = D[0]
     classes = D[1]
     H_D = calculate_entropy(classes)
-
     attributes_on_split_index = attributes[:, index]
-    class_y = []
-    class_n = []
-    for num in range(np.size(attributes_on_split_index)):
-        if attributes_on_split_index[num] <= value:
-            class_y.append(classes[num])
-        else:
-            class_n.append(classes[num])
-
+    class_y, class_n = split_into_classes(attributes_on_split_index, classes, value)
     H_Dy = calculate_entropy(np.array(class_y))
     H_Dn = calculate_entropy(np.array(class_n))
     average_entropy = (len(class_y)/classes.size * H_Dy) + (len(class_n)/classes.size * H_Dn)
     information_gain = H_D - average_entropy
     return information_gain
+
+
+def split_into_classes(attribute_to_split, classes, value):
+    class_y = []
+    class_n = []
+    for num in range(np.size(attribute_to_split)):
+        if attribute_to_split[num] <= value:
+            class_y.append(classes[num])
+        else:
+            class_n.append(classes[num])
+    return class_y, class_n
 
 
 def calculate_entropy(class_):
@@ -74,16 +76,8 @@ def G(D, index, value):
     """
     attributes = D[0]
     classes = D[1]
-    G_D = calculate_gini_index(classes)
     attributes_on_split_index = attributes[:, index]
-    class_y = []
-    class_n = []
-    for num in range(np.size(attributes_on_split_index)):
-        if attributes_on_split_index[num] <= value:
-            class_y.append(classes[num])
-        else:
-            class_n.append(classes[num])
-
+    class_y, class_n = split_into_classes(attributes_on_split_index, classes, value)
     G_Dy = calculate_gini_index(np.array(class_y))
     G_Dn = calculate_gini_index(np.array(class_n))
     average_gini = (len(class_y)/classes.size * G_Dy) + (len(class_n)/classes.size * G_Dn)
@@ -119,13 +113,7 @@ def CART(D, index, value):
     attributes = D[0]
     classes = D[1]
     attributes_on_split_index = attributes[:, index]
-    class_y = []
-    class_n = []
-    for num in range(np.size(attributes_on_split_index)):
-        if attributes_on_split_index[num] <= value:
-            class_y.append(classes[num])
-        else:
-            class_n.append(classes[num])
+    class_y, class_n = split_into_classes(attributes_on_split_index, classes, value)
     pre = 2 * (len(class_y)/classes.size) * (len(class_n)/classes.size)
     if len(class_n) == 0:
         p_c0_Dn = p_c1_Dn = 0
@@ -160,7 +148,7 @@ def bestSplit(D, criterion):
     best_ig = -np.inf
     best_gini = np.inf
     best_cart = -np.inf
-    for index in range(attributes.size):
+    for index in range(len(attributes[1])):
         values = attributes[index]
         unique_values = np.unique(values)
         for value in unique_values:
@@ -184,8 +172,8 @@ def bestSplit(D, criterion):
                     best_value = value
             else:
                 print("criterion must be one of 'IG', 'GINI', or 'CART'")
-        print(f"Best split for {criterion}(index, value) = ({best_index}, {best_value})")
-        return best_index, best_value
+    print(f"Best split for {criterion}(index, value) = ({best_index}, {best_value})")
+    return best_index, best_value
 
 # functions are first class objects in python, so let's refer to our desired criterion by a single name
 
@@ -226,18 +214,8 @@ def classifyIG(train, test):
     train_class = train[1]
     (index, value) = bestSplit(train, "IG")
 
-    class_y = []
-    attribute_y = []
-    class_n = []
-    attribute_n = []
     attributes_on_split_index = train_attributes[:, index]
-    for num in range(np.size(attributes_on_split_index)):
-        if attributes_on_split_index[num] <= value:
-            attribute_y.append(attributes_on_split_index[num])
-            class_y.append(train_class[num])
-        else:
-            attribute_n.append(attributes_on_split_index[num])
-            class_n.append(train_class[num])
+    class_y, class_n = split_into_classes(attributes_on_split_index, train_class, value)
     if class_y.count(0) > class_y.count(1):
         label_y = 0
     else:
@@ -248,19 +226,20 @@ def classifyIG(train, test):
         label_n = 1
 
     test_attributes = test[0]
-    class_y_test = []
-    class_n_test = []
-    test_class_predicted = []
     attributes_test_index = test_attributes[:, index]
-    for num in range(np.size(attributes_test_index)):
-        if attributes_test_index[num] <= value:
-            class_y_test.append(attributes_test_index[num])
-            test_class_predicted.append(label_y)
-        else:
-            class_n_test.append(attributes_test_index[num])
-            test_class_predicted.append(label_n)
-
+    test_class_predicted = split_into_classes_and_predict(attributes_test_index, value, label_y, label_n)
     print(f'predicted on IG: {test_class_predicted}')
+
+
+
+def split_into_classes_and_predict(attribute_to_split, value, y_label, n_label):
+    test_class_predicted = []
+    for num in range(np.size(attribute_to_split)):
+        if attribute_to_split[num] <= value:
+            test_class_predicted.append(y_label)
+        else:
+            test_class_predicted.append(n_label)
+    return test_class_predicted
 
 
 def classifyG(train, test):
@@ -278,18 +257,8 @@ def classifyG(train, test):
     train_class = train[1]
     (index, value) = bestSplit(train, "GINI")
 
-    class_y = []
-    attribute_y = []
-    class_n = []
-    attribute_n = []
     attributes_on_split_index = train_attributes[:, index]
-    for num in range(np.size(attributes_on_split_index)):
-        if attributes_on_split_index[num] <= value:
-            attribute_y.append(attributes_on_split_index[num])
-            class_y.append(train_class[num])
-        else:
-            attribute_n.append(attributes_on_split_index[num])
-            class_n.append(train_class[num])
+    class_y, class_n = split_into_classes(attributes_on_split_index, train_class, value)
     if class_y.count(0) > class_y.count(1):
         label_y = 0
     else:
@@ -300,18 +269,8 @@ def classifyG(train, test):
         label_n = 1
 
     test_attributes = test[0]
-    class_y_test = []
-    class_n_test = []
-    test_class_predicted = []
     attributes_test_index = test_attributes[:, index]
-    for num in range(np.size(attributes_test_index)):
-        if attributes_test_index[num] <= value:
-            class_y_test.append(attributes_test_index[num])
-            test_class_predicted.append(label_y)
-        else:
-            class_n_test.append(attributes_test_index[num])
-            test_class_predicted.append(label_n)
-
+    test_class_predicted = split_into_classes_and_predict(attributes_test_index, value, label_y, label_n)
     print(f'predicted on GINI: {test_class_predicted}')
 
 
@@ -330,18 +289,8 @@ def classifyCART(train, test):
     train_class = train[1]
     (index, value) = bestSplit(train, "CART")
 
-    class_y = []
-    attribute_y = []
-    class_n = []
-    attribute_n = []
     attributes_on_split_index = train_attributes[:, index]
-    for num in range(np.size(attributes_on_split_index)):
-        if attributes_on_split_index[num] <= value:
-            attribute_y.append(attributes_on_split_index[num])
-            class_y.append(train_class[num])
-        else:
-            attribute_n.append(attributes_on_split_index[num])
-            class_n.append(train_class[num])
+    class_y, class_n = split_into_classes(attributes_on_split_index, train_class, value)
     if class_y.count(0) > class_y.count(1):
         label_y = 0
     else:
@@ -352,18 +301,8 @@ def classifyCART(train, test):
         label_n = 1
 
     test_attributes = test[0]
-    class_y_test = []
-    class_n_test = []
-    test_class_predicted = []
     attributes_test_index = test_attributes[:, index]
-    for num in range(np.size(attributes_test_index)):
-        if attributes_test_index[num] <= value:
-            class_y_test.append(attributes_test_index[num])
-            test_class_predicted.append(label_y)
-        else:
-            class_n_test.append(attributes_test_index[num])
-            test_class_predicted.append(label_n)
-
+    test_class_predicted = split_into_classes_and_predict(attributes_test_index, value, label_y, label_n)
     print(f'predicted on CART: {test_class_predicted}')
 
 
