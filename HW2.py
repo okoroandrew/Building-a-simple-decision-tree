@@ -18,7 +18,6 @@ def IG(D, index, value):
     attributes = D[0]
     classes = D[1]
     H_D = calculate_entropy(classes)
-    print(f"Initial Entropy H(D) = {H_D}")
 
     attributes_on_split_index = attributes[:, index]
     class_y = []
@@ -31,14 +30,8 @@ def IG(D, index, value):
 
     H_Dy = calculate_entropy(np.array(class_y))
     H_Dn = calculate_entropy(np.array(class_n))
-    print(f"H(Dy) = {H_Dy}")
-    print(f"H(Dn) = {H_Dn}")
-
     average_entropy = (len(class_y)/classes.size * H_Dy) + (len(class_n)/classes.size * H_Dn)
-    print(f"average entropy = {average_entropy}")
-
     information_gain = H_D - average_entropy
-    print(f"Information Gain = {information_gain}")
     return information_gain
 
 
@@ -54,13 +47,13 @@ def calculate_entropy(class_):
     n = len(nn)
     n_0 = nn.count(0)
     n_1 = nn.count(1)
-    p_c0_D = n_0 / n
-    p_c1_D = n_1 / n
-    if n == n_0 or n == n_1:
+    if n == n_0 or n == n_1 or n == 0:
         return 0
     elif n_0 == n_1:
         return 1
     else:
+        p_c0_D = n_0 / n
+        p_c1_D = n_1 / n
         h_d_0 = p_c0_D * math.log2(p_c0_D)
         h_d_1 = p_c1_D * math.log2(p_c1_D)
         H_D = -1 * (h_d_0 + h_d_1)
@@ -82,8 +75,6 @@ def G(D, index, value):
     attributes = D[0]
     classes = D[1]
     G_D = calculate_gini_index(classes)
-    print(f"initial gini index G(D) = {G_D}")
-
     attributes_on_split_index = attributes[:, index]
     class_y = []
     class_n = []
@@ -95,15 +86,8 @@ def G(D, index, value):
 
     G_Dy = calculate_gini_index(np.array(class_y))
     G_Dn = calculate_gini_index(np.array(class_n))
-    print(f"G(Dy) = {G_Dy}")
-    print(f"G(Dn) = {G_Dn}")
-
     average_gini = (len(class_y)/classes.size * G_Dy) + (len(class_n)/classes.size * G_Dn)
-    print(f"average gini = {average_gini}")
-
-    gini_index_value = G_D - average_gini
-    print(f"gini index value = {gini_index_value}")
-    return gini_index_value
+    return average_gini
 
 
 def calculate_gini_index(class_):
@@ -111,10 +95,13 @@ def calculate_gini_index(class_):
     n = len(nn)
     n_0 = nn.count(0)
     n_1 = nn.count(1)
-    p_c0_D_square = (n_0 / n)**2
-    p_c1_D_square = (n_1 / n)**2
-    gini = 1 - (p_c1_D_square + p_c0_D_square)
-    return gini
+    if n == 0:
+        return 0
+    else:
+        p_c0_D_square = (n_0 / n)**2
+        p_c1_D_square = (n_1 / n)**2
+        gini = 1 - (p_c1_D_square + p_c0_D_square)
+        return gini
 
 
 def CART(D, index, value):
@@ -140,15 +127,20 @@ def CART(D, index, value):
         else:
             class_n.append(classes[num])
     pre = 2 * (len(class_y)/classes.size) * (len(class_n)/classes.size)
-    p_c0_Dy = class_y.count(0)/len(class_y)
-    p_c0_Dn = class_n.count(0)/len(class_n)
-    p_c1_Dy = class_y.count(1) / len(class_y)
-    p_c1_Dn = class_n.count(1) / len(class_n)
+    if len(class_n) == 0:
+        p_c0_Dn = p_c1_Dn = 0
+    else:
+        p_c0_Dn = class_n.count(0) / len(class_n)
+        p_c1_Dn = class_n.count(1) / len(class_n)
+    if len(class_y) == 0:
+        p_c0_Dy = p_c1_Dy = 0
+    else:
+        p_c0_Dy = class_y.count(0) / len(class_y)
+        p_c1_Dy = class_y.count(1) / len(class_y)
     p_c0_Dy_minus_p_c0_Dn_abs = abs(p_c0_Dy - p_c0_Dn)
     p_c1_Dy_minus_p_c1_Dn_abs = abs(p_c1_Dy - p_c1_Dn)
     summation = p_c1_Dy_minus_p_c1_Dn_abs + p_c0_Dy_minus_p_c0_Dn_abs
     cart = pre * summation
-    print(f"CART(Dy, Dn) = {cart}")
     return cart
 
 
@@ -156,13 +148,44 @@ def bestSplit(D, criterion):
     """Computes the best split for dataset D using the specified criterion
 
     Args:
-        D: A dataset, tuple (X, y) where X is the data, y the classes
+        D: A dataset, tuple (X, y) where X is the data, y the classes'
         criterion: one of "IG", "GINI", "CART"
 
     Returns:
         A tuple (i, value) where i is the index of the attribute to split at value
     """
-
+    attributes = D[0]
+    best_index = 0
+    best_value = 0
+    best_ig = -np.inf
+    best_gini = np.inf
+    best_cart = -np.inf
+    for index in range(attributes.size):
+        values = attributes[index]
+        unique_values = np.unique(values)
+        for value in unique_values:
+            if criterion == "IG":
+                information_gain = IG(D, index, value)
+                if information_gain > best_ig:
+                    best_ig = information_gain
+                    best_index = index
+                    best_value = value
+            elif criterion == "GINI":
+                gini_index = G(D, index, value)
+                if gini_index < best_gini:
+                    best_gini = gini_index
+                    best_index = index
+                    best_value = value
+            elif criterion == "CART":
+                cart = CART(D, index, value)
+                if cart > best_cart:
+                    best_cart = cart
+                    best_index = index
+                    best_value = value
+            else:
+                print("criterion must be one of 'IG', 'GINI', or 'CART'")
+        print(f"Best split for {criterion}(index, value) = ({best_index}, {best_value})")
+        return best_index, best_value
 
 # functions are first class objects in python, so let's refer to our desired criterion by a single name
 
@@ -180,8 +203,11 @@ def load(filename):
         the classes of the observations, in the same order
     """
     data = np.loadtxt(filename, delimiter=',')
-    attributes = data[:, 0:10]
+    size_attribute = len(data[1])-1
+    attributes = data[:, 0:size_attribute]
     classes = data[:, -1]
+
+
     return attributes, classes
 
 
@@ -196,6 +222,45 @@ def classifyIG(train, test):
     Returns:
         A list of predicted classes for observations in test (in order)
     """
+    train_attributes = train[0]
+    train_class = train[1]
+    (index, value) = bestSplit(train, "IG")
+
+    class_y = []
+    attribute_y = []
+    class_n = []
+    attribute_n = []
+    attributes_on_split_index = train_attributes[:, index]
+    for num in range(np.size(attributes_on_split_index)):
+        if attributes_on_split_index[num] <= value:
+            attribute_y.append(attributes_on_split_index[num])
+            class_y.append(train_class[num])
+        else:
+            attribute_n.append(attributes_on_split_index[num])
+            class_n.append(train_class[num])
+    if class_y.count(0) > class_y.count(1):
+        label_y = 0
+    else:
+        label_y = 1
+    if class_n.count(0) > class_n.count(1):
+        label_n = 0
+    else:
+        label_n = 1
+
+    test_attributes = test[0]
+    class_y_test = []
+    class_n_test = []
+    test_class_predicted = []
+    attributes_test_index = test_attributes[:, index]
+    for num in range(np.size(attributes_test_index)):
+        if attributes_test_index[num] <= value:
+            class_y_test.append(attributes_test_index[num])
+            test_class_predicted.append(label_y)
+        else:
+            class_n_test.append(attributes_test_index[num])
+            test_class_predicted.append(label_n)
+
+    print(f'predicted on IG: {test_class_predicted}')
 
 
 def classifyG(train, test):
@@ -209,6 +274,45 @@ def classifyG(train, test):
     Returns:
         A list of predicted classes for observations in test (in order)
     """
+    train_attributes = train[0]
+    train_class = train[1]
+    (index, value) = bestSplit(train, "GINI")
+
+    class_y = []
+    attribute_y = []
+    class_n = []
+    attribute_n = []
+    attributes_on_split_index = train_attributes[:, index]
+    for num in range(np.size(attributes_on_split_index)):
+        if attributes_on_split_index[num] <= value:
+            attribute_y.append(attributes_on_split_index[num])
+            class_y.append(train_class[num])
+        else:
+            attribute_n.append(attributes_on_split_index[num])
+            class_n.append(train_class[num])
+    if class_y.count(0) > class_y.count(1):
+        label_y = 0
+    else:
+        label_y = 1
+    if class_n.count(0) > class_n.count(1):
+        label_n = 0
+    else:
+        label_n = 1
+
+    test_attributes = test[0]
+    class_y_test = []
+    class_n_test = []
+    test_class_predicted = []
+    attributes_test_index = test_attributes[:, index]
+    for num in range(np.size(attributes_test_index)):
+        if attributes_test_index[num] <= value:
+            class_y_test.append(attributes_test_index[num])
+            test_class_predicted.append(label_y)
+        else:
+            class_n_test.append(attributes_test_index[num])
+            test_class_predicted.append(label_n)
+
+    print(f'predicted on GINI: {test_class_predicted}')
 
 
 def classifyCART(train, test):
@@ -222,6 +326,45 @@ def classifyCART(train, test):
     Returns:
         A list of predicted classes for observations in test (in order)
     """
+    train_attributes = train[0]
+    train_class = train[1]
+    (index, value) = bestSplit(train, "CART")
+
+    class_y = []
+    attribute_y = []
+    class_n = []
+    attribute_n = []
+    attributes_on_split_index = train_attributes[:, index]
+    for num in range(np.size(attributes_on_split_index)):
+        if attributes_on_split_index[num] <= value:
+            attribute_y.append(attributes_on_split_index[num])
+            class_y.append(train_class[num])
+        else:
+            attribute_n.append(attributes_on_split_index[num])
+            class_n.append(train_class[num])
+    if class_y.count(0) > class_y.count(1):
+        label_y = 0
+    else:
+        label_y = 1
+    if class_n.count(0) > class_n.count(1):
+        label_n = 0
+    else:
+        label_n = 1
+
+    test_attributes = test[0]
+    class_y_test = []
+    class_n_test = []
+    test_class_predicted = []
+    attributes_test_index = test_attributes[:, index]
+    for num in range(np.size(attributes_test_index)):
+        if attributes_test_index[num] <= value:
+            class_y_test.append(attributes_test_index[num])
+            test_class_predicted.append(label_y)
+        else:
+            class_n_test.append(attributes_test_index[num])
+            test_class_predicted.append(label_n)
+
+    print(f'predicted on CART: {test_class_predicted}')
 
 
 def main():
@@ -231,14 +374,15 @@ def main():
     This way, when you <import HW2>, no code is run - only the functions you
     explicitly call.
     """
-    D = load('./test.txt')
-    index = 0
-    value = 0
-    information_gain = IG(D, index, value)
+    # index = 0
+    # value = 0
+    train = load('./train.txt')
+    test = load('./test.txt')
+    classifyIG(train, test)
     print()
-    print(G(D, index, value))
+    classifyG(train, test)
     print()
-    CART(D, index, value)
+    classifyCART(train, test)
 
 
 if __name__ == "__main__":
