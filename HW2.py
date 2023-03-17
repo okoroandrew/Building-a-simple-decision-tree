@@ -190,12 +190,18 @@ def load(filename):
         where X[i] comes from the i-th row in filename; y is a list or ndarray of
         the classes of the observations, in the same order
     """
+    D = load_and_split(filename)
+    bestSplit(D, "IG")
+    bestSplit(D, "GINI")
+    bestSplit(D, "CART")
+    return D
+
+
+def load_and_split(filename):
     data = np.loadtxt(filename, delimiter=',')
-    size_attribute = len(data[1])-1
+    size_attribute = len(data[1]) - 1
     attributes = data[:, 0:size_attribute]
     classes = data[:, -1]
-
-
     return attributes, classes
 
 
@@ -224,7 +230,8 @@ def classifyIG(train, test):
         label_n = 0
     else:
         label_n = 1
-
+    print(f'label for yes_class: {label_y}')
+    print(f'label for no_class: {label_n}')
     test_attributes = test[0]
     attributes_test_index = test_attributes[:, index]
     test_class_predicted = split_into_classes_and_predict(attributes_test_index, value, label_y, label_n)
@@ -267,7 +274,8 @@ def classifyG(train, test):
         label_n = 0
     else:
         label_n = 1
-
+    print(f'label for yes_class: {label_y}')
+    print(f'label for no_class: {label_n}')
     test_attributes = test[0]
     attributes_test_index = test_attributes[:, index]
     test_class_predicted = split_into_classes_and_predict(attributes_test_index, value, label_y, label_n)
@@ -299,6 +307,8 @@ def classifyCART(train, test):
         label_n = 0
     else:
         label_n = 1
+    print(f'label for yes_class: {label_y}')
+    print(f'label for no_class: {label_n}')
 
     test_attributes = test[0]
     attributes_test_index = test_attributes[:, index]
@@ -313,10 +323,8 @@ def main():
     This way, when you <import HW2>, no code is run - only the functions you
     explicitly call.
     """
-    # index = 0
-    # value = 0
-    train = load('./train.txt')
-    test = load('./test.txt')
+    train = load_and_split('./train.txt')
+    test = load_and_split('./test.txt')
     classifyIG(train, test)
     print()
     classifyG(train, test)

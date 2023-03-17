@@ -1,0 +1,14 @@
+Best split for IG(index, value) = (7, 4.0)
+label for yes_class: 0
+label for no_class: 1
+predicted on IG: [0, 0, 0, 1, 1, 1, 1, 1, 0, 0]
+
+Best split for GINI(index, value) = (5, 4.0)
+label for yes_class: 0
+label for no_class: 1
+predicted on GINI: [0, 0, 0, 0, 1, 1, 0, 0, 0, 0]
+
+Best split for CART(index, value) = (2, 0.0)
+label for yes_class: 1
+label for no_class: 0
+predicted on CART: [0, 0, 0, 0, 1, 1, 0, 1, 0, 0]
